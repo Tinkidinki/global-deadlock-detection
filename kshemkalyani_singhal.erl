@@ -63,7 +63,7 @@ enter_edge(Wfg, N)->
     {ok, From} = io:read("Enter From Vertex:\n"), 
     {ok, To} = io:read("Enter To Vertex:\n"),
     digraph:add_edge(Wfg, From, To),
-    enter_edge(Wfg, N-1).
+    enter_edge(Wfg, N-1).       
 
 spawn_processes(Wfg, 0, Initiator) -> ok;
 spawn_processes(Wfg, N, Initiator) ->
