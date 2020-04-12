@@ -1,22 +1,52 @@
 -module(template).
 -compile(export_all).
 
-% Note: to send a message to any node, first convert it to an atom as: list_to_atom(integer_to_list(Node)).
+send_flood(Rec, Send) ->
+    list_to_atom(integer_to_list(Rec)) ! {flood, Send}.
+
+send_echo(Rec, Send) ->
+    list_to_atom(integer_to_list(Rec)) ! {echo, Send}.
+
+receive_echo(0, Initiator) -> 
+    if 
+        (Initiator) ->
+            io:format("NOT DEADLOCKED\n", []);
+        true ->
+            ok
+    end;
+receive_echo(P, Initiator) ->
+    receive
+        {echo, Node} -> ok
+    end,
+    receive_echo(P-1, Initiator).
 
 init(V, Neigh, Initiator) ->
     {Node, P} = V,
     io:format("Initiator, ~w~n", [Node]), 
     io:format("Minimum resources for node ~w: ~w~n", [Node, P]), 
-    io:format("Out-neighbours for node ~w: ~w~n", [Node, Neigh]).
-    % Write code for what initiator needs to do here (change the preceding comma to a fullstop)
+    io:format("Out-neighbours for node ~w: ~w~n", [Node, Neigh]),
+    % Write code for what initiator needs to do here.
+
+    % Flood everyone!
+    lists:foreach(send_flood, Neigh),
+    receive_echo(P, true). % true means you are the initiator
 
 proc(V, Neigh, Initiator) ->
     {Node, P} = V,
     io:format("Process, ~w~n", [Node]), 
     io:format("Minimum resources node ~w: ~w~n", [Node, P]), 
-    io:format("Out-neighbours for node ~w: ~w~n", [Node, Neigh]).
-    % Write code for what other processes need to do here (change the preceding comma to a fullstop)
-   
+    io:format("Out-neighbours for node ~w: ~w~n", [Node, Neigh]),
+    
+    % Write code for what other processes need to do here. 
+    receive
+        {flood, Engage} ->
+            lists:foreach(send_flood, Neigh)
+    end,
+
+    receive_echo(P, false), % false means you are not the initiator
+    send_echo(Engage, Node).
+
+    
 
 
 enter_vertex(Wfg, 0) -> ok;
