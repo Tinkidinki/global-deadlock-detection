@@ -1,4 +1,4 @@
--module(template).
+-module(kshemkalyani_singhal).
 -compile(export_all).
 
 send_flood(Rec, Send) ->
@@ -28,7 +28,8 @@ init(V, Neigh, Initiator) ->
     % Write code for what initiator needs to do here.
 
     % Flood everyone!
-    lists:foreach(send_flood, Neigh),
+    % lists:foreach(send_flood, Neigh),
+    [send_flood(N, Node) || N <- Neigh],
     receive_echo(P, true). % true means you are the initiator
 
 proc(V, Neigh, Initiator) ->
@@ -40,7 +41,7 @@ proc(V, Neigh, Initiator) ->
     % Write code for what other processes need to do here. 
     receive
         {flood, Engage} ->
-            lists:foreach(send_flood, Neigh)
+            [send_flood(N, Node) || N <- Neigh]
     end,
 
     receive_echo(P, false), % false means you are not the initiator
@@ -68,9 +69,9 @@ spawn_processes(Wfg, 0, Initiator) -> ok;
 spawn_processes(Wfg, N, Initiator) ->
     if 
         N == Initiator ->
-            register(list_to_atom(integer_to_list(N)), spawn(template, init, [digraph:vertex(Wfg, N), digraph:out_neighbours(Wfg, N), Initiator]));
+            register(list_to_atom(integer_to_list(N)), spawn(kshemkalyani_singhal, init, [digraph:vertex(Wfg, N), digraph:out_neighbours(Wfg, N), Initiator]));
         true ->
-            register(list_to_atom(integer_to_list(N)), spawn(template, proc, [digraph:vertex(Wfg, N), digraph:out_neighbours(Wfg, N), Initiator]))
+            register(list_to_atom(integer_to_list(N)), spawn(kshemkalyani_singhal, proc, [digraph:vertex(Wfg, N), digraph:out_neighbours(Wfg, N), Initiator]))
     end,
     spawn_processes(Wfg, N-1, Initiator).
 
