@@ -29,7 +29,6 @@ init(V, Neigh, Initiator) -> %Assumption: Initiator is blocked by atleast one pr
     Weight = 1/Num_neigh,
     io:format("Weight distributed: ~w~n", [Weight]),
     [send_flood(N, Node, Weight) || N <- Neigh],
-    % receive_echo(P, true). % true means you are the initiator
     init_receive_loop(0, P).
 
 send_echo(Node, Weight) ->
@@ -91,7 +90,7 @@ spawn_processes(Wfg, N, Initiator) ->
     spawn_processes(Wfg, N-1, Initiator).
 
 
-main([Input_file])->
+main(Input_file)->
 
     Wfg = digraph:new(),
     Input_file_string = atom_to_list(Input_file),
