@@ -1,102 +1,97 @@
 -module(ks).
 -compile(export_all).
 
-receive_flood_loop()->
-    receive 
-        {flood, N} ->
-            receive_flood_loop()
+p(X) ->
+    list_to_atom(integer_to_list(X)).
+
+send_flood(Rec, Sender, Weight) ->
+    p(Rec) ! {flood, Sender, Weight}.
+
+init_receive_loop(Weight_curr,0) ->  %received  back all its echoes
+    io:format("NOT DEADLOCKED~n", []);
+init_receive_loop(1.0, P) -> %algorithm terminated, but yet to receive echoes
+    io:format("DEADLOCKED~n", []);
+init_receive_loop(Weight_curr, P) ->
+    io:format("Enters init_receive_loop: ~w, ~w ~n",[Weight_curr, P]),
+    receive
+        {flood, Sender, Weight_new} ->
+            init_receive_loop(Weight_curr + Weight_new, P);
+        {echo, Weight_new} ->
+            init_receive_loop(Weight_curr + Weight_new, P-1);
+        {short, Weight_new} ->
+            init_receive_loop(Weight_curr + Weight_new, P)
     end.
 
-send_flood(Rec, Send) ->
-    list_to_atom(integer_to_list(Rec)) ! {flood, Send}.
 
-send_echo(Rec, Send) ->
-    list_to_atom(integer_to_list(Rec)) ! {echo, Send}.
-
-receive_echo(0, Initiator) -> 
-    if 
-        (Initiator) ->
-            io:format("NOT DEADLOCKED\n", []);
-        true ->
-            ok
-    end;
-receive_echo(P, Initiator) ->
-    receive
-        {echo, Node} -> ok
-    end,
-    receive_echo(P-1, Initiator).
-
-init(V, Neigh, Initiator) ->
+init(V, Neigh, Initiator) -> %Assumption: Initiator is blocked by atleast one process. 
     {Node, P} = V,
-    % ---------------------Debugging Code--------------------------
-    % io:format("Initiator, ~w~n", [Node]), 
-    % io:format("Minimum resources for node ~w: ~w~n", [Node, P]), 
-    % io:format("Out-neighbours for node ~w: ~w~n", [Node, Neigh]),
-    % -------------------------------------------------------------
-    
-    % Flood everyone!
-    [send_flood(N, Node) || N <- Neigh],
-    receive_echo(P, true). % true means you are the initiator
+    Num_neigh = length(Neigh),
+    Weight = 1/Num_neigh,
+    io:format("Weight distributed: ~w~n", [Weight]),
+    [send_flood(N, Node, Weight) || N <- Neigh],
+    % receive_echo(P, true). % true means you are the initiator
+    init_receive_loop(0, P).
+
+send_echo(Node, Weight) ->
+    io:format("Node is: ~w~n", [Node]),
+    p(Node) ! {echo, Weight}.
+
+proc_receive_loop_red(Initiator) ->
+    receive
+        {flood, Sender, Weight} ->
+            p(Sender) ! {echo, Weight};
+        {echo, Weight} ->
+            p(Initiator) ! {short, Weight}
+    end, 
+    proc_receive_loop_red(Initiator).
+
+proc_receive_loop(Flood_list, Initiator, Weight_curr, 0) ->
+    io:format("Flood list: ~w~n", [Flood_list]),
+    Weight_send = Weight_curr/length(Flood_list),
+    [send_echo(N, Weight_send) || N <- Flood_list],
+    proc_receive_loop_red(Initiator);
+
+proc_receive_loop(Flood_list, Initiator, Weight_curr, P) ->
+    p(Initiator) ! {short, Weight_curr},
+    receive
+        {flood, Sender, Weight_new} ->
+            proc_receive_loop(lists:append(Flood_list, Sender), Initiator, Weight_new, P);
+        {echo, Weight_new} ->
+            proc_receive_loop(Flood_list, Initiator, Weight_new, P-1)
+    end.
 
 proc(V, Neigh, Initiator) ->
     {Node, P} = V,
 
-    % ---------------------Debugging Code--------------------------
-    % io:format("This is V ~w~n", [V]),
-    % io:format("Process, ~w~n", [Node]), 
-    % io:format("Minimum resources node ~w: ~w~n", [Node, P]), 
-    % io:format("Out-neighbours for node ~w: ~w~n", [Node, Neigh]).
-    % -------------------------------------------------------------
-     
     receive
-        {flood, Engage} ->
-            io:format("VALUE OF NEIGH: ~w~n", [Neigh]),
-            [send_flood(N, Node) || N <- Neigh]
+        {flood, Engager, Weight} ->
+            Num_neigh = length(Neigh),
+            if
+                Num_neigh == 0 ->
+                    Weight_send = 0;
+                true ->
+                    Weight_send = Weight/Num_neigh
+            end,
+            Weight_left = Weight - Weight_send,
+            [send_flood(N, Node, Weight_send) || N <- Neigh]
     end,
 
-    receive_echo(P, false), % false means you are not the initiator
-    send_echo(Engage, Node), 
-    receive_flood_loop().
+    proc_receive_loop([Engager], Initiator, Weight_left, P).
 
     
-
-
-% enter_vertex(Wfg, 0) -> ok;
-% enter_vertex(Wfg, N)->
-%     io:format("Enter P: minimum number of resources for process ~w to run:", [N]),
-%     {ok, P} = io:read("\n"),
-%     digraph:add_vertex(Wfg, N, P),
-%     enter_vertex(Wfg, N-1).
-
-% enter_edge(Wfg, 0)-> ok;
-% enter_edge(Wfg, N)->
-%     io:format("Enter edge\n"),
-%     {ok, From} = io:read("Enter From Vertex:\n"), 
-%     {ok, To} = io:read("Enter To Vertex:\n"),
-%     digraph:add_edge(Wfg, From, To),
-%     enter_edge(Wfg, N-1).       
 
 spawn_processes(Wfg, 0, Initiator) -> ok;
 spawn_processes(Wfg, N, Initiator) ->
     if 
         N == Initiator ->
-            io:format("IF PORTION ~w~n", [N]),
             register(list_to_atom(integer_to_list(N)), spawn(ks, init, [digraph:vertex(Wfg, N), digraph:out_neighbours(Wfg, N), Initiator]));
         true ->
-            io:format("ELSE PORTION ~w~n", [N]),
             register(list_to_atom(integer_to_list(N)), spawn(ks, proc, [digraph:vertex(Wfg, N), digraph:out_neighbours(Wfg, N), Initiator]))
     end,
     spawn_processes(Wfg, N-1, Initiator).
 
 
 main([Input_file])->
-    % {ok, Num_proc} = io:read("Enter number of processes:\n"),
-    % {ok, Num_edges} = io:read("Enter number of edges:\n "),
-    % Wfg = digraph:new(),
-    % enter_vertex(Wfg, Num_proc),
-    % enter_edge(Wfg, Num_edges),
-    % {ok, Initiator} = io:read("Enter vertex to initiate deadlock detection:\n"),
-    % spawn_processes(Wfg, Num_proc, Initiator).
 
     Wfg = digraph:new(),
     Input_file_string = atom_to_list(Input_file),
@@ -113,8 +108,6 @@ main([Input_file])->
 
     [digraph:add_vertex(Wfg, I, lists:nth(I, P_values)) || I <- lists:seq(1, Num_proc)],
     [digraph:add_edge(Wfg, lists:nth(I, From_values), lists:nth(I, To_values)) || I <- lists:seq(1, Num_edges)],
-    io:format("VERTICES ~w~n", [digraph:vertices(Wfg)]),
-    io:format("TEST ~w~n", [digraph:vertex(Wfg, 3)]), 
     spawn_processes(Wfg, Num_proc, Initiator).
 
     
