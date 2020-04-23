@@ -30,7 +30,7 @@ init(V, Neigh, Initiator) -> %Assumption: Initiator is blocked by atleast one pr
     io:format("Weight distributed: ~w~n", [Weight]),
     [send_flood(N, Node, Weight) || N <- Neigh],
     init_receive_loop(0, P).
-
+    
 send_echo(Node, Weight) ->
     io:format("Node is: ~w~n", [Node]),
     p(Node) ! {echo, Weight}.
