@@ -1,6 +1,11 @@
 # global-deadlock-detection
-Distributed Systems Final Project - Simulating deadlocks and experimenting with them
+This project simulates a [Wait-For-Graph](https://en.wikipedia.org/wiki/Wait-for_graph) given as input by running several processes that are dependent on each other in accordance with the input wait-for graph. It then runs a global deadlock detection algorithm on these processes, and returns whether or not the processes are in a state of deadlock. 
 
+The key idea in a global deadlock detection algorithm is to somehow capture a snapshot of the wait-for graph, and examine it for deadlocks. The process of capturing this snapshot is distributed among various nodes. 
+
+Two deadlock detection algorithms are implemented in this repository: The Kshemkalyani-Singhal algorithm, and the Deng-Attie-Sun algorithm. Details of these algorithms are available in the (report)[https://github.com/Tinkidinki/global-deadlock-detection/blob/master/report.pdf]. 
+
+Instructions to run the Kshemkalyani-Singhal algorithm are given below:
 ## Kshemkalyani-Singhal Algorithm
 
 To run the algorithm:
@@ -28,7 +33,7 @@ List of 'To' nodes for all edges
 Initiator
 ```
 
-Example
+Example input
 
 For the graph: 1 -> 2 -> 3, we have:
 
