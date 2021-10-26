@@ -1,5 +1,5 @@
 # global-deadlock-detection
-This project simulates a [Wait-For-Graph](https://en.wikipedia.org/wiki/Wait-for_graph) given as input by running several processes that are dependent on each other in accordance with the input wait-for graph. It then runs a global deadlock detection algorithm on these processes, and returns whether or not the processes are in a state of deadlock. 
+This project simulates a [wait-for graph](https://en.wikipedia.org/wiki/Wait-for_graph) given as input by running several processes that are dependent on each other in accordance with the input wait-for graph. It then runs a global deadlock detection algorithm on these processes, and returns whether or not the processes are in a state of deadlock. 
 
 The key idea in a global deadlock detection algorithm is to somehow capture a snapshot of the wait-for graph, and examine it for deadlocks. The process of capturing this snapshot is distributed among various nodes. 
 
